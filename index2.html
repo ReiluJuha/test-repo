@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="fi" dir="ltr">
+<head>
+<title>Infrakit 2000</title>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="styles/layout.css" type="text/css"></link>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.6/css/bootstrap.css"></link>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-Knob/1.2.13/jquery.knob.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.6/js/bootstrap.min.js"></script>
+<script src="https://code.jquery.com/ui/1.11.4/jquery-ui.min.js" integrity="sha256-xNjb53/rY+WmG+4L6tTl9m6PpqknWZvRt0rO1SRnJzw=" crossorigin="anonymous"></script>
+
+<script type="text/javascript">
+  var clientId = "Client-ID 675ed2e4b9d8b2e";
+	
+  $.ajax({
+    type: "GET",
+	url: "https://api.imgur.com/3/gallery/hot/viral/0.json",
+    dataType: "text",
+    beforeSend: function(xhr) {
+        xhr.setRequestHeader("Authorization", clientId);
+    },
+    success: function(data) {
+   	   
+      var json = $.parseJSON(data);
+      var links = json.data.map(function(item) {
+        return item.link;
+      })
+      var isAlbum = json.data.map(function(item) {
+        return item.is_album;
+      })	
+	  var albumId = json.data.map(function(item) {
+		return item.id;
+	  })	   
+	    
+      for (i=0; i<10; i++) {
+        var idd = "Img" + i;
+	    if (isAlbum[i]) {  
+          setAlbumImage(i, albumId[i]);		  
+	    }
+        else {
+ 	      var captionSlotId = "Cap" + i;
+	      document.getElementById(idd).src = links[i];		   	 
+	      var metadata = JSON.stringify(json.data[i]);
+		  metadata = metadata.slice(1, metadata.length - 2);
+		  sendToDatabase(metadata);
+	      metadata = metadata.replace(/,/g, " ");
+	      document.getElementById(captionSlotId).innerHTML = metadata;		   
+	    }
+      }	  
+    }
+});	
+
+function setAlbumImage(index, albumId){
+  var pictureSlotId = "Img" + index;
+  var captionSlotId = "Cap" + index;
+  $.ajax({
+      type: "GET",
+      url: "https://api.imgur.com/3/gallery/" + albumId,
+      dataType: "json",
+      headers:{
+        "Authorization":clientId
+      },
+      success: function(data) {
+   	    document.getElementById(pictureSlotId).src = data.data.images[0].link;	
+	    var metadata = JSON.stringify(data.data.images[0]);
+		 metadata = metadata.slice(1, metadata.length - 2);
+		sendToDatabase(metadata);
+	    metadata = metadata.replace(/,/g, " ");
+	    document.getElementById(captionSlotId).innerHTML = metadata;
+      }
+  });	
+}
+
+function sendToDatabase(metadatastring) {
+
+
+	"use strict";
+
+	var Chat = {};
+
+	Chat.socket = null;
+
+	Chat.connect = (function(host) {
+		if ('WebSocket' in window) {
+			Chat.socket = new WebSocket(host);
+		} else if ('MozWebSocket' in window) {
+			Chat.socket = new MozWebSocket(host);
+		} else {
+			Console.log('Error: WebSocket is not supported by this browser.');
+			return;
+		}
+
+		Chat.socket.onopen = function () {
+			//Console.log('Info: WebSocket connection opened.');
+			document.getElementById('connect').onclick = function(event) {
+				//if (event.keyCode == 13) {
+					Chat.sendMessage();
+				//}
+			};
+		};
+
+		Chat.socket.onclose = function () {
+			document.getElementById('chat').onkeydown = null;
+			Console.log('Info: WebSocket closed.');
+		};
+
+		Chat.socket.onmessage = function (message) {
+			Console.log(message.data);
+		};
+	});
+
+	Chat.initialize = function() {
+		 //alert("start Init!");  
+		 Chat.connect('ws://localhost:8080/examples/websocket/chat');				
+	};
+
+	Chat.sendMessage = (function() {
+		var message = metadatastring; //document.getElementById("Cap0").innerHTML;
+		//var message = document.getElementById('chat').value;
+		if (message != '') {
+			Chat.socket.send(message);
+			document.getElementById('chat').value = '';
+		}
+	});
+
+	var Console = {};
+
+	Console.log = (function(message) {
+		var console = document.getElementById('console');
+		var p = document.createElement('p');
+		p.style.wordWrap = 'break-word';
+		p.innerHTML = message;
+		console.appendChild(p);
+		while (console.childNodes.length > 25) {
+			console.removeChild(console.firstChild);
+		}
+		console.scrollTop = console.scrollHeight;
+	});
+
+	Chat.initialize();
+
+
+	document.addEventListener("DOMContentLoaded", function() {
+		// Remove elements with "noscript" class - <noscript> is not allowed in XHTML
+		var noscripts = document.getElementsByClassName("noscript");
+		for (var i = 0; i < noscripts.length; i++) {
+			noscripts[i].parentNode.removeChild(noscripts[i]);
+		}
+	}, false);
+
+}
+
+
+</script>
+</head>
+
+<body>
+<div class="wrapper row1">
+  <header id="header" class="clear">
+    <div id="hgroup">
+      <h1><a href="http://www.infrakit.com">Infrakit</a></h1>
+      <h2>Image stealer 2000 (beta)</h2>
+    </div>
+  </header>
+</div>
+
+<!-- content -->
+<div class="wrapper row2">
+  <div id="container" class="clear"> 
+    <div>
+	  <center>
+      <button id="connect" onclick="">Send to DataBase</button>
+	  </center>
+    </div> 
+	<div>
+	<center> <div id="console-container"> </center>	
+    <center> <div id="console"/></div></center>	
+    </div>	
+    <div id="homepage">
+      <section id="latest" class="clear">
+        <article class="four_quarter lastbox">
+          <figure><img id="Img0" src="images/demo/215x315.gif" width="215" height="315" alt=""></img>
+            <figcaption id="Cap0">Image 1</figcaption>
+          </figure>
+        </article>
+        <article class="four_quarter">
+          <figure><img id="Img1" src="images/demo/215x315.gif" width="215" height="315" alt=""></img>
+            <figcaption id="Cap1">Image 2</figcaption>
+          </figure>
+        </article>
+        <article class="four_quarter">
+          <figure><img id="Img2" src="images/demo/215x315.gif" width="215" height="315" alt=""></img>
+            <figcaption id="Cap2">Image 3</figcaption>
+          </figure>
+        </article>
+        <article class="four_quarter">
+          <figure><img id="Img3" src="images/demo/215x315.gif" width="215" height="315" alt=""></img>
+            <figcaption id="Cap3">Image 4</figcaption>
+          </figure>
+        </article>
+        <article class="four_quarter">
+          <figure><img id="Img4" src="images/demo/215x315.gif" width="215" height="315" alt=""></img>
+            <figcaption id="Cap4">Image 5</figcaption>
+          </figure>
+        </article>
+        <article class="four_quarter">
+          <figure><img id="Img5" src="images/demo/215x315.gif" width="215" height="315" alt=""></img>
+            <figcaption id="Cap5">Image 6</figcaption>
+          </figure>
+        </article>
+        <article class="four_quarter">
+          <figure><img id="Img6" src="images/demo/215x315.gif" width="215" height="315" alt=""></img>
+            <figcaption id="Cap6">Image 7</figcaption>
+          </figure>
+        </article>
+        <article class="four_quarter">
+          <figure><img id="Img7" src="images/demo/215x315.gif" width="215" height="315" alt=""></img>
+            <figcaption id="Cap7">Image 8</figcaption>
+          </figure>
+        </article>
+        <article class="four_quarter">
+          <figure><img id="Img8" src="images/demo/215x315.gif" width="215" height="315" alt=""></img>
+            <figcaption id="Cap8">Image 9</figcaption>
+          </figure>
+        </article>
+        <article class="four_quarter">
+          <figure><img id="Img9" src="images/demo/215x315.gif" width="215" height="315" alt=""></img>
+            <figcaption id="Cap9">Image 10</figcaption>
+          </figure>
+        </article>		
+      </section>
+      <section id="shout">
+        <p>This ends the section of 10 stolen images and their metadata... thank you and good night!</p>
+      </section>
+	  </div>
+  </div>
+</div>
+<!-- Footer -->
+<div class="wrapper row3">
+  <footer id="footer" class="clear">
+    <p class="fl_left">Copyright 2016 - All Rights Reserved - <a href="http://www.saunalahti.fi/~jukivis1/omg2.jpg">Juha Kivistö</a></p>
+  </footer>
+</div>
+</body>
+</html>
+
